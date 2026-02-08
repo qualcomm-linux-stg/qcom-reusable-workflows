@@ -40,16 +40,11 @@ on:
         required: false
         type: boolean
         default: true
-      armor-checker-build-script:
+      armor-checker-options:
         required: false
         type: string
-        default: 'ci/build.sh'
-        description: 'Build script path used by ABI checker in armor-checkers'
-      armor-checker-runner:
-        required: false
-        type: string
-        default: '["ubuntu-latest"]'
-        description: 'AWS runner used by ARMOR Checkers'
+        default: ''
+        description: 'ARMOR checker options as JSON string.e.g., {"build-script":"ci/build.sh","runs-on":{"group":"<group>","labels":["<l1>","<l2>"]}}'
 
 jobs:
   semgrep-scan:
@@ -98,13 +93,12 @@ jobs:
       extra-options: ${{ inputs.commit-msg-check-extra-options }}    
     permissions:
       contents: read
-  
+
   armor-checkers:
     if: ${{ inputs.enable-armor-checkers }}
     name: ARMOR Checkers
-    uses: ./.github/workflows/resuable-armor-checkers.yml
+    uses: qualcomm-linux-stg/armor-checkers/.github/workflows/armor-checker.yml@test_branch1
     with:
-      build-script:  ${{ inputs.armor-checker-build-script }}
-      runner:  ${{ inputs.armor-checker-runner }}
+      armor-checker-options: ${{ inputs.armor-checker-options }}
     permissions:
       contents: read
