@@ -97,7 +97,7 @@ jobs:
   armor-checkers:
     if: ${{ inputs.enable-armor-checkers }}
     name: ARMOR Checkers
-    uses: qualcomm/armor-checkers/.github/workflows/armor-checker.yml@test_branch1
+    uses: qualcomm/armor-checkers/.github/workflows/armor-checker.yml@main
     with:
       armor-checker-options: ${{ inputs.armor-checker-options }}
     permissions:
