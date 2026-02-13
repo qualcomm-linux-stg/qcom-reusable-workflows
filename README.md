@@ -140,10 +140,7 @@ The workflow:
 - **ARMOR Compatibility Checkers**: Ensures source-level (API) and binary-level (ABI) backward compatibility of source code using [armor-checkers](https://github.com/qualcomm/armor-checkers)
   - **Configuration Options:**
     - `enable-armor-checkers`: Boolean to enable/disable the check (default: `false`)
-    - `armor-checker-options`: String containing JSON object with options (default: empty string)
-      ```json
-      {"build-script":"ci/build.sh","runs-on":{"group":"runner-group","labels":["label1","label2"]}}
-      ```
+    - `armor-checker-options`: String containing JSON object with options (default: empty string). To view all available options, please see the link at:https://github.com/qualcomm/armor-checkers
   - Runs on both push and pull request events
 
 For detailed configuration options and default values for each action, please refer to their respective GitHub repositories.
