@@ -25,9 +25,11 @@ jobs:
       - name: Fetch PR details
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr_number }}
         run: |
           echo "=== PR Details ==="
-          gh api repos/${{ github.repository }}/pulls/${{ inputs.pr_number }} \
+          gh api "repos/${GH_REPO}/pulls/${PR_NUMBER}" \
             --jq '{
               number: .number,
               title: .title,
@@ -48,9 +50,12 @@ jobs:
       - name: Fetch Workflow Run Attempt details
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          WORKFLOW_ID: ${{ inputs.workflow_id }}
+          RUN_ATTEMPT: ${{ inputs.run_attempt }}
         run: |
           echo "=== Workflow Run Attempt Details ==="
-          gh api repos/${{ github.repository }}/actions/runs/${{ inputs.workflow_id }}/attempts/${{ inputs.run_attempt }} \
+          gh api "repos/${GH_REPO}/actions/runs/${WORKFLOW_ID}/attempts/${RUN_ATTEMPT}" \
             --jq '{
               run_id: .id,
               workflow_name: .name,
