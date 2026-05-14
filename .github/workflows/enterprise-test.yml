@@ -1,0 +1,13 @@
+name: QC Preflight Checks (test)
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  preflight:
+    name: Run QC Preflight Checks (test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo 
+        run: echo "hello world"    
