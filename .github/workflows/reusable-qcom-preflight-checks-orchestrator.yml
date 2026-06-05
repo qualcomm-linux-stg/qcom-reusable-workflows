@@ -102,3 +102,4 @@ jobs:
       armor-checker-options: ${{ inputs.armor-checker-options }}
     permissions:
       contents: read
+      pull-requests: read
