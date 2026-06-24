@@ -45,11 +45,6 @@ on:
         type: string
         default: ''
         description: 'ARMOR checker options as JSON string.e.g., {"build-script":"ci/build.sh","runs-on":{"group":"<group>","labels":["<l1>","<l2>"]}}'
-      approver-team:
-        required: false
-        type: string
-        default: ''
-        description: 'GitHub team slug for ARMOR exception approval (e.g. audio-api-owners)'
 
 jobs:
   semgrep-scan:
@@ -105,7 +100,6 @@ jobs:
     uses: qualcomm-linux-stg/armor-checkers-staging/.github/workflows/armor-checker.yml@armor-exception
     with:
       armor-checker-options: ${{ inputs.armor-checker-options }}
-      approver-team: ${{ inputs.approver-team }}
     permissions:
       contents: read
       pull-requests: read
