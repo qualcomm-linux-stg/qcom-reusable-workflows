@@ -59,4 +59,4 @@ jobs:
 
       - name: Fail on ERROR severity findings
         run: |
-          python3 reusable-workflows/scripts/check_sarif_error.py semgrep.sarif
+          python3 reusable-workflows/script/check_sarif_error.py semgrep.sarif
