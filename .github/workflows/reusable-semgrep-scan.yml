@@ -41,6 +41,7 @@ jobs:
         with:
           repository: qualcomm-linux-stg/qcom-reusable-workflows
           path: reusable-workflows
+          ref: semgrpe-patch
           persist-credentials: false
 
       - name: Configure git
