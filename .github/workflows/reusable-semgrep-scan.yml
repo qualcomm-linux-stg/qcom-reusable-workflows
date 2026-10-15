@@ -39,8 +39,9 @@ jobs:
       - name: Checkout reusable workflow repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: qualcomm/qcom-reusable-workflows
+          repository: qualcomm-linux-stg/qcom-reusable-workflows
           path: reusable-workflows
+          ref: semgrep-patch
           persist-credentials: false
 
       - name: Configure git
