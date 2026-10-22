@@ -206,6 +206,8 @@ def main() -> int:
         owner, repo = github_repository.split("/", 1)
 
     ref = github_ref or ""
+    if ref.startswith("refs/pull/") and ref.endswith("/merge"):
+        ref = ref.rsplit("/", 1)[0] + "/head"
 
     # Use GitHub alert state when code scanning is available; otherwise fall back
     # to SARIF parsing (internal/private repos without Advanced Security).
