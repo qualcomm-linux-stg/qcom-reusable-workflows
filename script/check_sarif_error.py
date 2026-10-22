@@ -75,48 +75,30 @@ def print_finding(data: Dict[str, Any], is_github_alert: bool = False) -> None:
     print("", file=sys.stderr)
 
 
-def check_repo_visibility(owner: str, repo: str, token: str) -> bool:
-    """
-    Check if a GitHub repository is public.
-    Returns True if public, False otherwise.
-    """
-    url = f"https://api.github.com/repos/{owner}/{repo}"
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "Authorization": f"Bearer {token}",
-        "X-GitHub-Api-Version": "2022-11-28",
-    }
-    
-    try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        resp.raise_for_status()
-        return resp.json().get("visibility") == "public"
-    except Exception as e:
-        print(f"Warning: Unable to determine repository visibility: {e}", file=sys.stderr)
-        return False
+NO_ADVANCED_SECURITY_MESSAGE = "Advanced Security must be enabled"
 
 
-def fetch_open_alerts(owner: str, repo: str, token: str, ref: Optional[str] = None) -> List[Dict[str, Any]]:
+class CodeScanningUnavailable(Exception):
+    """Raised when GitHub code scanning is not enabled (internal/private repo without GHAS)."""
+
+
+def fetch_open_alerts(owner: str, repo: str, token: str, ref: str) -> List[Dict[str, Any]]:
     """
     Fetch open code-scanning alerts from GitHub.
     Returns a list of alert objects.
+    Raises CodeScanningUnavailable if the repo has no Advanced Security.
     """
     url = f"https://api.github.com/repos/{owner}/{repo}/code-scanning/alerts"
-    
+
     # Build query parameters
     params = {
         "state": "open",
-        "tool": "Semgrep OSS",
+        "tool_name": "Semgrep OSS",
         "severity": "error",
         "per_page": "100",
+        "ref": ref,
     }
-    
-    if ref:
-        params["ref"] = ref
-    else:
-        print("Warning: No ref provided for alert query", file=sys.stderr)
-        return []
-    
+
     headers = {
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {token}",
@@ -126,32 +108,25 @@ def fetch_open_alerts(owner: str, repo: str, token: str, ref: Optional[str] = No
     all_alerts: List[Dict[str, Any]] = []
     page = 1
     
-    try:
-        while True:
-            # Add page parameter for pagination
-            params["page"] = str(page)
-            
-            resp = requests.get(url, headers=headers, params=params, timeout=30)
-            resp.raise_for_status()
-            alerts = resp.json()
-            
-            if not alerts:
-                break
-            
-            # Collect all alert objects
-            all_alerts.extend(alerts)
-            
-            # Check if there are more pages
-            if len(alerts) < 100:
-                break
-            page += 1
-                
-    except requests.exceptions.HTTPError as e:
-        print(f"Warning: Unable to fetch code-scanning alerts (HTTP {e.response.status_code})", file=sys.stderr)
-        sys.exit(2)
-    except Exception as e:
-        print(f"Warning: Error fetching code-scanning alerts: {e}", file=sys.stderr)
-        sys.exit(2)
+    while True:
+        # Add page parameter for pagination
+        params["page"] = str(page)
+
+        resp = requests.get(url, headers=headers, params=params, timeout=30)
+        if resp.status_code == 403 and NO_ADVANCED_SECURITY_MESSAGE in resp.text:
+            raise CodeScanningUnavailable(resp.json().get("message", ""))
+        resp.raise_for_status()
+        alerts = resp.json()
+        if not isinstance(alerts, list):
+            raise ValueError(f"Unexpected response from code-scanning API: {alerts!r}")
+
+        # Collect all alert objects
+        all_alerts.extend(alerts)
+        
+        # Check if there are more pages
+        if len(alerts) < 100:
+            break
+        page += 1
     
     return all_alerts
 
@@ -230,51 +205,41 @@ def main() -> int:
     else:
         owner, repo = github_repository.split("/", 1)
 
-    ref = github_ref if github_ref else ""
+    ref = github_ref or ""
 
-    # Determine behavior based on repository visibility
-    is_public = False
-    if owner and repo and github_token:
-        is_public = check_repo_visibility(owner, repo, github_token)
+    # Use GitHub alert state when code scanning is available; otherwise fall back
+    # to SARIF parsing (internal/private repos without Advanced Security).
+    open_alerts: Optional[List[Dict[str, Any]]] = None
+    if not (owner and repo and github_token and ref):
+        print("Missing GitHub context (repository/token/ref); using SARIF-only check", file=sys.stderr)
+    else:
+        try:
+            print(f"Fetching open alerts for {owner}/{repo} on ref: {ref}", file=sys.stderr)
+            open_alerts = fetch_open_alerts(owner, repo, github_token, ref)
+        except CodeScanningUnavailable as e:
+            print(f"Code scanning unavailable ({e}); using SARIF-only check", file=sys.stderr)
+        except (requests.RequestException, ValueError) as e:
+            print(f"Error: Unable to fetch GitHub alerts: {e}", file=sys.stderr)
+            return 2
 
-    # For public repos, use GitHub alerts directly
-    if is_public:
-        print(f"Public repository detected: {owner}/{repo}", file=sys.stderr)
-        
-        if ref:
-            print(f"Querying open alerts for ref: {ref}", file=sys.stderr)
-            open_alerts = fetch_open_alerts(owner, repo, github_token, ref=ref)
-        else:
-            print("Warning: No ref available, using SARIF-only check", file=sys.stderr)
-            open_alerts = []
-        
+    if open_alerts is not None:
         if open_alerts:
             print(f"Found {len(open_alerts)} open alert(s) on GitHub", file=sys.stderr)
             for alert in open_alerts:
                 print_finding(alert, is_github_alert=True)
             print(f"Found {len(open_alerts)} error-severity finding(s) from GitHub alerts.", file=sys.stderr)
             return 1
-        else:
-            # No open alerts means no failures
-            print("No error-severity findings matching open GitHub alerts.")
-            return 0
-    else:
-        # Internal/private repo: use all error results from SARIF
-        if owner and repo:
-            print(f"Internal/private repository detected: {owner}/{repo}", file=sys.stderr)
-        else:
-            print("Warning: GitHub repository information not available", file=sys.stderr)
-        print("Using SARIF-only check (all error-severity findings will fail)", file=sys.stderr)
-
-        if error_results:
-            for result in error_results:
-                print_finding(result)
-            print(f"Found {len(error_results)} error-severity finding(s).", file=sys.stderr)
-            return 1
-
-        # Success
-        print("No error-severity findings found.")
+        print("No error-severity findings matching open GitHub alerts.")
         return 0
+
+    print("Using SARIF-only check (all error-severity findings will fail)", file=sys.stderr)
+    if error_results:
+        for result in error_results:
+            print_finding(result)
+        print(f"Found {len(error_results)} error-severity finding(s).", file=sys.stderr)
+        return 1
+    print("No error-severity findings found.")
+    return 0
 
 
 if __name__ == "__main__":
