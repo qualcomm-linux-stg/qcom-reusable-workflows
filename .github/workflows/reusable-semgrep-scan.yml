@@ -14,7 +14,7 @@ permissions:
   
 jobs:
   run-semgrep-scan:
-    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request') && github.actor != 'dependabot[bot]' }}
+    if: ${{ (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch') && github.actor != 'dependabot[bot]' }}
     name: Run Semgrep Scan
     runs-on: ubuntu-latest
 
@@ -39,9 +39,8 @@ jobs:
       - name: Checkout reusable workflow repo
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: qualcomm-linux-stg/qcom-reusable-workflows
+          repository: qualcomm/qcom-reusable-workflows
           path: reusable-workflows
-          ref: semgrep-patch
           persist-credentials: false
 
       - name: Configure git
