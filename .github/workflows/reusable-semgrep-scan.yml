@@ -64,5 +64,4 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REF: ${{ github.ref }}
         run: |
-          pip3 install --quiet requests
           python3 reusable-workflows/script/check_sarif_error.py semgrep.sarif
