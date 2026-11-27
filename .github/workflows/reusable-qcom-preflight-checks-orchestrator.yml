@@ -97,7 +97,7 @@ jobs:
   armor-checkers:
     if: ${{ inputs.enable-armor-checkers }}
     name: ARMOR Compatibility Checkers
-    uses: qualcomm-linux-stg/armor-checkers-staging/.github/workflows/armor-checker.yml@armor-exception
+    uses: qualcomm-linux-stg/armor-checkers-staging/.github/workflows/armor-checker.yml@trusted-s3-upload
     with:
       armor-checker-options: ${{ inputs.armor-checker-options }}
     permissions:
